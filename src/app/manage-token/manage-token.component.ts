@@ -3,6 +3,9 @@ import { NgForm } from '@angular/forms';
 import {Web3Service} from '../util/web3.service';
 import fixedSupplyToken_artifacts from '../../../build/contracts/FixedSupplyToken.json';
 import exchange_artifacts from '../../../build/contracts/Exchange.json';
+import { ExchangeInfoService } from '../service/exchange-info-service.service';
+import { ExchangeInfo } from '../service/exchangeInfo.model';
+import { TransactionStatusService } from '../service/transaction-status.service';
 
 
 @Component({
@@ -21,13 +24,18 @@ export class ManageTokenComponent implements OnInit {
   currentAccount : string;
   tokenBalance : string;
   status : string;
+  exchangeInfo : ExchangeInfo;
+  managRef : any;
 
-  constructor(private web3Service: Web3Service) {
+  constructor(private web3Service: Web3Service,private exchangeInfoServiceService: ExchangeInfoService,
+      private statusService:TransactionStatusService) {
     console.log('Constructor: ' + web3Service);
+
   }
 
-  ngOnInit(): void {
+  ngOnInit() {
     console.log('OnInit: ' + this.web3Service);
+    console.log('Ready Status : ' + this.web3Service.ready);
     console.log(this);
 
     this.web3Service.artifactsToContract(fixedSupplyToken_artifacts)
@@ -40,6 +48,10 @@ export class ManageTokenComponent implements OnInit {
       });
 
     this.watchAccount();
+    if(this.web3Service.ready){
+      this.web3Service.accountsObservable.next(this.web3Service.accounts);
+    }
+      console.log('COnInit Completed: ' );
   }
 
   watchAccount() {
@@ -54,19 +66,27 @@ export class ManageTokenComponent implements OnInit {
   }
 
   async refreshBalance() {
-    console.log('Refreshing balance');
-
+    console.log('Manage Token : Refreshing balance');
+    if ((typeof this.ExchangeContract === 'undefined' || typeof this.TokenContract ==='undefined') || !this.ExchangeContract) {
+      //this.setStatus('ExchangeContract Contract is not loaded, unable to send transaction');
+      return;
+    }
     try {
     //  const deployedMetaCoin = await this.MetaCoin.deployed();
       const deployedToken = await this.TokenContract.deployed();
       const deployedExchange = await this.ExchangeContract.deployed();
+      const weiBalance = await this.web3Service.getBalance(this.currentAccount);
+      const etherBalance = this.web3Service.convertFromwei(weiBalance);
+      const tempBalance = await deployedToken.balanceOf.call(this.currentAccount);
+      this.tokenBalance = tempBalance;
 
-      const tokenBalance = await deployedToken.balanceOf.call(this.currentAccount);
-      console.log('Found balance: ' + tokenBalance);
-      console.log('Token Address: '+deployedToken.address);
-      console.log('Exchange Address: '+deployedExchange.address);
-      
-      this.tokenBalance = tokenBalance;
+      console.log("   this.tokenBalance   "+ this.tokenBalance);
+      console.log("   this.tempBalance   "+ tempBalance);
+      console.log("   refreshBalance() : this.currentAccount   "+ this.currentAccount);
+
+      this.exchangeInfo = new ExchangeInfo(deployedExchange.address,deployedToken.address,this.currentAccount,etherBalance);
+      this.exchangeInfoServiceService.updateExchangeInfo(this.exchangeInfo);
+
     } catch (e) {
       console.log(e);
       this.setStatus('Error getting balance; see log.');
@@ -75,6 +95,7 @@ export class ManageTokenComponent implements OnInit {
 
   setStatus(status) {
     this.status = status;
+    this.statusService.setStatus(status);
   }
 
   async sendToken(){

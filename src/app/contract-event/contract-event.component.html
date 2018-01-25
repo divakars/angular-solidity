@@ -1,8 +1,34 @@
 <div class="col-lg-4" style="background-color: #eee; min-height: 100vh;">
+  <div class="row" *ngIf="exchangeBalance.display===true">
+      <div class="col-md-12">
+        <h3>
+              Your Assets
+          </h3>
+          You have <span class="black">{{ exchangeBalance.tokenBalance }} {{ exchangeBalance.tokenName }} TOKEN</span> in the
+              exchange <br>
+          You have <span class="black">{{ exchangeBalance.etherbalance }} ETHER</span> in the exchange
+      </div>
+    </div>
       <h3>Events from the Token Contract</h3>
-      <div id="tokenEvents"></div>
+        <div class="alert alert-info  alert-dismissible" *ngIf="eventInfo.display===true">
+  	        <strong>New Event: {{eventInfo.eventName}} </strong>
+        </div>
+        <textarea class="form-control" id="argument" *ngIf="eventInfo.display===true">{{eventInfo.eventArgument}}</textarea>
       <h3>Status from our Javascript</h3>
-      <span id="status"></span>
+      <div class="d-inline p-2 bg-primary text-white">{{ status }}</div>
+
       <h3>Important Information</h3>
-      <span id="importantInformation"></span>
+        <div class="alert alert-info">
+            Address Exchange: {{exchangeInfo.exchangeAddress}}
+        </div>
+        <div class="alert alert-info">
+            Address Token:  {{exchangeInfo.tokenExcAddress}}
+        </div>
+        <div class="alert alert-info">
+            Active Account:   {{exchangeInfo.activeAccount}}
+        </div>
+        <div class="alert alert-info">
+            Balance in Ether:   {{exchangeInfo.activeAccountBalance}}
+        </div>
+
   </div>

@@ -11,6 +11,14 @@ import { ManageTokenComponent } from './manage-token/manage-token.component';
 import { OrderBookComponent } from './order-book/order-book.component';
 import { HomePageComponent } from './home-page/home-page.component';
 import { ContractEventComponent } from './contract-event/contract-event.component';
+import { OrderBookListComponent } from './order-book/order-book-list/order-book-list.component';
+import { OrderBookService } from './util/orderbook.service';
+import { ExchangeInfoService } from './service/exchange-info-service.service';
+import { EventInfoService } from './service/event-info-service.service';
+import { ExchangeInteractionService } from './service/exchange-interaction-service.service';
+import { TransactionStatusService } from './service/transaction-status.service';
+import { BidbookService } from './service/bidbook.service';
+import { BidListComponent } from './order-book/bid-list/bid-list.component';
 
 const appRoutes : Routes = [
    {path:'',component:HomePageComponent},
@@ -26,7 +34,9 @@ const appRoutes : Routes = [
     ManageTokenComponent,
     OrderBookComponent,
     HomePageComponent,
-    ContractEventComponent
+    ContractEventComponent,
+    OrderBookListComponent,
+    BidListComponent
   ],
   imports: [
     BrowserModule,
@@ -35,7 +45,7 @@ const appRoutes : Routes = [
     MetaModule,
     RouterModule.forRoot(appRoutes)
   ],
-  providers: [],
+  providers: [OrderBookService, ExchangeInfoService, EventInfoService, ExchangeInteractionService, TransactionStatusService, BidbookService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

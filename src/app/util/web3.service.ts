@@ -9,10 +9,11 @@ declare let window: any;
 @Injectable()
 export class Web3Service {
   private web3: Web3;
-  private accounts: string[];
+  public accounts: string[];
   public ready = false;
   public MetaCoin: any;
   public accountsObservable = new Subject<string[]>();
+  public accountBalance : any;
 
   constructor() {
     window.addEventListener('load', (event) => {
@@ -67,7 +68,6 @@ export class Web3Service {
 
       if (!this.accounts || this.accounts.length !== accs.length || this.accounts[0] !== accs[0]) {
         console.log('Observed new accounts');
-
         this.accountsObservable.next(accs);
         this.accounts = accs;
       }
@@ -76,9 +76,23 @@ export class Web3Service {
     });
   }
 
-   public  convert(value:string, conversionName: string) {
+   public  convert(value:any, conversionName: string) : any {
     // return this.web3.utils.toWei(value, this.web3.utils.unitMap(conversionName));
     return this.web3.utils.toWei(new BN(value,10),"ether");
    }
+
+   public convertFromwei(balance:any): any{
+     console.log(' Value received : '+balance);
+     return this.web3.utils.fromWei(balance, 'ether');
+   }
+
+   public async getBalance(balAccount:any)  {
+     var ethBal:any;
+     console.log('Web3Service  : getBalance ');
+     return this.web3.eth.getBalance(balAccount);
+
+   }
+
+
 
 }

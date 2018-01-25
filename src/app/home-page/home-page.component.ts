@@ -1,15 +1,22 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild,OnDestroy } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { Web3Service } from '../util/web3.service';
 import fixedSupplyToken_artifacts from '../../../build/contracts/FixedSupplyToken.json';
 import exchange_artifacts from '../../../build/contracts/Exchange.json';
+import { ExchangeInfoService } from '../service/exchange-info-service.service';
+import { ExchangeInteractionService } from '../service/exchange-interaction-service.service';
+import { ExchangeInfo } from '../service/exchangeInfo.model';
+import { ExchangeBalance } from '../service/exchangebalance.model';
+import { TransactionStatusService } from '../service/transaction-status.service';
+import { Subscription } from 'rxjs/Subscription';
 
 @Component({
   selector: 'app-home-page',
   templateUrl: './home-page.component.html',
+  providers: [ExchangeInteractionService],
   styleUrls: ['./home-page.component.css']
 })
-export class HomePageComponent implements OnInit {
+export class HomePageComponent implements OnInit,OnDestroy  {
 
   @ViewChild('depositTokenForm') depositTokenForm: NgForm;
   @ViewChild('depositEtherForm') depositEtherForm: NgForm;
@@ -19,18 +26,20 @@ export class HomePageComponent implements OnInit {
   accounts: string[];
   currentAccount : string;
   status : string;
+  exchangeInfo : ExchangeInfo;
+  exchangeBalance : ExchangeBalance = new ExchangeBalance('','','',false);
+  tokenBalance : string;
 
   TokenContract : any;
   ExchangeContract : any;
+  subscription: Subscription;
 
-  constructor(private web3Service: Web3Service) {
+  constructor(private web3Service: Web3Service,private exchangeInfoServiceService: ExchangeInfoService
+        ,private statusService:TransactionStatusService , private exchangeInteractionService:ExchangeInteractionService) {
     console.log('Constructor: ' + web3Service);
   }
 
   ngOnInit() {
-    console.log('OnInit: ' + this.web3Service);
-    console.log(this);
-
     this.web3Service.artifactsToContract(fixedSupplyToken_artifacts)
       .then((FixedSupplyTokenAbstraction) => {
         this.TokenContract = FixedSupplyTokenAbstraction;
@@ -40,6 +49,11 @@ export class HomePageComponent implements OnInit {
         this.ExchangeContract = ExchangeAbstraction;
       });
       this.watchAccount();
+      if(this.web3Service.ready){
+        this.web3Service.accountsObservable.next(this.web3Service.accounts);
+      }
+      this.subscription = this.exchangeInteractionService.getExchangeBalanceObservable().subscribe(
+                exchangeBalance => { this.exchangeBalance = exchangeBalance; });
   }
 
   watchAccount() {
@@ -47,12 +61,33 @@ export class HomePageComponent implements OnInit {
     this.web3Service.accountsObservable.subscribe((accounts) => {
       this.accounts = accounts;
       this.currentAccount = accounts[0];
+      this.refreshBalance();
       console.log('this.currentAccount: '+ this.currentAccount);
     });
   }
 
+  async refreshBalance() {
+    if ((typeof this.ExchangeContract == 'undefined') || !this.ExchangeContract) {
+      //this.setStatus('ExchangeContract Contract is not loaded, unable to send transaction');
+      return;
+    }
+    try {
+      const deployedToken = await this.TokenContract.deployed();
+      const deployedExchange = await this.ExchangeContract.deployed();
+      const tempTokenBalance = await this.web3Service.getBalance(this.currentAccount);
+      this.tokenBalance = this.web3Service.convertFromwei(tempTokenBalance);
+      this.exchangeInfo = new ExchangeInfo(deployedExchange.address,deployedToken.address,this.currentAccount,this.tokenBalance);
+      this.exchangeInfoServiceService.updateExchangeInfo(this.exchangeInfo);
+
+    } catch (e) {
+      console.log(e);
+      this.setStatus('Error getting balance; see log.');
+    }
+  }
+
   setStatus(status) {
     this.status = status;
+    this.statusService.setStatus(status);
   }
 
   async depositEther(){
@@ -153,6 +188,11 @@ export class HomePageComponent implements OnInit {
       console.log(e);
       this.setStatus('Error Depositing Token; see log.');
     }
+  }
+
+  ngOnDestroy() {
+    // unsubscribe to ensure no memory leaks
+    this.subscription.unsubscribe();
   }
 
 }
